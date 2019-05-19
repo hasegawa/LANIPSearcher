@@ -108,7 +108,7 @@ namespace LANIPSearcher
                         if (ret == 0)
                         {
                         // デバッグ用
-                        Debug.WriteLine(destinationIP);
+                        //Debug.WriteLine(destinationIP);
                         this.IPBean.AddLANIP(destinationIP);
                         }
                     }
@@ -128,7 +128,7 @@ namespace LANIPSearcher
                 if (t.Status == TaskStatus.RanToCompletion)
                 {
                     // デバッグ用
-                    Debug.WriteLine("end.");
+                    //Debug.WriteLine("end.");
                 }
                 else if (t.Status == TaskStatus.Faulted)
                 {
