@@ -1,6 +1,7 @@
 ﻿using LANIPSearcher.Bean;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -76,52 +77,63 @@ namespace LANIPSearcher
 
             // 1～254のホストへARP送信
             List<Task> allTasks = new List<Task>();
-            for (int i = 1; i <= 254; i++)
+
+            // 自ネットワークを取得
+            List<string> networkPartList = new List<string>();
+            for (int i = 0; i < this.IPBean.SelfIPList.Count; i++)
             {
-                int hostPart = i;
-                allTasks.Add(Task.Run(() =>
+                List<string> separateIP = this.IPBean.SelfIPList[i].Split('.').ToList();
+                separateIP.RemoveAt(3);
+                string network = string.Join(".", separateIP);
+                networkPartList.Add(network);
+            }
+
+            for (int i = 0; i < networkPartList.Count; i++)
+            {
+                string networkPart = networkPartList[i];
+                for (int j = 1; j <= 254; j++)
                 {
-                    // IPからネットワーク部を取得
-                    List<string> separateIP = this.IPBean.SelfIPList[0].Split('.').ToList();
-                    separateIP.RemoveAt(3);
-                    string networkPart = string.Join(".", separateIP);
+                    int hostPart = j;
+                    allTasks.Add(Task.Run(() =>
+                    {
 
                     // ネットワーク部 + ホスト部でLocalIPへARPを投げる
                     string destinationIP = networkPart + "." + hostPart;
-                    int destinationIPBytes = BitConverter.ToInt32(IPAddress.Parse(destinationIP).GetAddressBytes(), 0);
-                    byte[] macAddressPointer = new byte[6];
-                    int physicalAddressLength = macAddressPointer.Length;
+                        int destinationIPBytes = BitConverter.ToInt32(IPAddress.Parse(destinationIP).GetAddressBytes(), 0);
+                        byte[] macAddressPointer = new byte[6];
+                        int physicalAddressLength = macAddressPointer.Length;
 
                     // ARP
                     int ret = SendARP(destinationIPBytes, 0, macAddressPointer, ref physicalAddressLength);
-                    if (ret == 0)
-                    {
+                        if (ret == 0)
+                        {
                         // デバッグ用
-                        //Debug.WriteLine(destinationIP);
+                        Debug.WriteLine(destinationIP);
                         this.IPBean.AddLANIP(destinationIP);
+                        }
                     }
+                    ));
                 }
-                ));
-            }
 
-            Task t = Task.WhenAll(allTasks);
-            try
-            {
-                t.Wait();
-            }
-            catch
-            {
-                MessageBox.Show("エラー終了");
-            }
+                Task t = Task.WhenAll(allTasks);
+                try
+                {
+                    t.Wait();
+                }
+                catch
+                {
+                    MessageBox.Show("エラー終了");
+                }
 
-            if (t.Status == TaskStatus.RanToCompletion)
-            {
-                // デバッグ用
-                //Debug.WriteLine("end.");
-            }
-            else if (t.Status == TaskStatus.Faulted)
-            {
-                //Debug.WriteLine("erro end.");
+                if (t.Status == TaskStatus.RanToCompletion)
+                {
+                    // デバッグ用
+                    Debug.WriteLine("end.");
+                }
+                else if (t.Status == TaskStatus.Faulted)
+                {
+                    //Debug.WriteLine("erro end.");
+                }
             }
         }
         #endregion
